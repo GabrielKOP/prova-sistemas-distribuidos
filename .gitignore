@@ -4,6 +4,7 @@ presentation_guide.md
 walkthrough.md
 local_test.py
 task.md
+explicacao_detalhada.md
 
 # Python cache & compiled files
 __pycache__/
