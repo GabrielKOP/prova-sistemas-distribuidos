@@ -1,0 +1,141 @@
+version: '3.8'
+
+networks:
+  dist-net:
+    driver: bridge
+
+services:
+  # 1. Consumer Server (Receives items from Producer Server, dispatches to Consumer Nodes)
+  consumer-server:
+    build: .
+    container_name: consumer-server
+    command: python consumer_server.py
+    environment:
+      - PRODUCER_PORT=6000
+      - CONSUMER_PORT=7000
+    ports:
+      - "6000:6000"
+      - "7000:7000"
+      - "8000:8000"
+    networks:
+      - dist-net
+    restart: always
+
+  # 2. Producer Server (Receives items from Producers, forwards to Consumer Server with ACKs)
+  producer-server:
+    build: .
+    container_name: producer-server
+    command: python producer_server.py
+    environment:
+      - PORT=5000
+      - CONSUMER_SERVER_HOST=consumer-server
+      - CONSUMER_SERVER_PORT=6000
+    ports:
+      - "5000:5000"
+    networks:
+      - dist-net
+    depends_on:
+      - consumer-server
+    restart: always
+
+  # 3. Producer Node 1 (Generates Product A)
+  producer-node-1:
+    build: .
+    container_name: producer-node-1
+    command: python producer_node.py
+    environment:
+      - PRODUCT_TYPE=A
+      - PRODUCER_SERVER_HOST=producer-server
+      - PRODUCER_SERVER_PORT=5000
+      - MIN_INTERVAL=1.5
+      - MAX_INTERVAL=3.5
+    networks:
+      - dist-net
+    depends_on:
+      - producer-server
+    restart: always
+
+  # 4. Producer Node 2 (Generates Product B)
+  producer-node-2:
+    build: .
+    container_name: producer-node-2
+    command: python producer_node.py
+    environment:
+      - PRODUCT_TYPE=B
+      - PRODUCER_SERVER_HOST=producer-server
+      - PRODUCER_SERVER_PORT=5000
+      - MIN_INTERVAL=1.5
+      - MAX_INTERVAL=3.5
+    networks:
+      - dist-net
+    depends_on:
+      - producer-server
+    restart: always
+
+  # 5. Producer Node 3 (Generates Product C)
+  producer-node-3:
+    build: .
+    container_name: producer-node-3
+    command: python producer_node.py
+    environment:
+      - PRODUCT_TYPE=C
+      - PRODUCER_SERVER_HOST=producer-server
+      - PRODUCER_SERVER_PORT=5000
+      - MIN_INTERVAL=1.5
+      - MAX_INTERVAL=3.5
+    networks:
+      - dist-net
+    depends_on:
+      - producer-server
+    restart: always
+
+  # 6. Consumer Node 1 (Requests random products)
+  consumer-node-1:
+    build: .
+    container_name: consumer-node-1
+    command: python consumer_node.py
+    environment:
+      - NODE_ID=ConsNode-1
+      - CONSUMER_SERVER_HOST=consumer-server
+      - CONSUMER_SERVER_PORT=7000
+      - MIN_INTERVAL=2.0
+      - MAX_INTERVAL=5.0
+    networks:
+      - dist-net
+    depends_on:
+      - consumer-server
+    restart: always
+
+  # 7. Consumer Node 2 (Requests random products)
+  consumer-node-2:
+    build: .
+    container_name: consumer-node-2
+    command: python consumer_node.py
+    environment:
+      - NODE_ID=ConsNode-2
+      - CONSUMER_SERVER_HOST=consumer-server
+      - CONSUMER_SERVER_PORT=7000
+      - MIN_INTERVAL=2.0
+      - MAX_INTERVAL=5.0
+    networks:
+      - dist-net
+    depends_on:
+      - consumer-server
+    restart: always
+
+  # 8. Consumer Node 3 (Requests random products)
+  consumer-node-3:
+    build: .
+    container_name: consumer-node-3
+    command: python consumer_node.py
+    environment:
+      - NODE_ID=ConsNode-3
+      - CONSUMER_SERVER_HOST=consumer-server
+      - CONSUMER_SERVER_PORT=7000
+      - MIN_INTERVAL=2.0
+      - MAX_INTERVAL=5.0
+    networks:
+      - dist-net
+    depends_on:
+      - consumer-server
+    restart: always

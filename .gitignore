@@ -1,0 +1,21 @@
+# Instruções e Guia de Apresentação Acadêmica (Ignorados no Git de entrega)
+prova sistemas distribuidos.pdf
+presentation_guide.md
+walkthrough.md
+local_test.py
+task.md
+
+# Python cache & compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS temporary files
+.DS_Store
+Thumbs.db
+
+# IDE & Editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
