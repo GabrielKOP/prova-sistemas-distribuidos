@@ -42,7 +42,10 @@ async def request_product(p_type: str) -> dict | None:
         
         if response and response.get("status") == "OK":
             product = response.get("product")
-            logger.info(f"Successfully consumed product '{p_type}' ({product['id']}) after waiting {elapsed:.2f}s!")
+            product_id = product.get("id") if product else None
+            logger.info(
+                f"Successfully consumed product '{p_type}' ({product_id}) after waiting {elapsed:.2f}s!"
+            )
             return product
         else:
             logger.warning(f"Failed to receive product: {response}")

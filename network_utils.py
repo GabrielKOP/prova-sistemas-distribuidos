@@ -32,17 +32,17 @@ class ColoredFormatter(logging.Formatter):
         formatter = logging.Formatter(fmt, datefmt="%H:%M:%S")
         return formatter.format(record)
 
-def setup_logger(name: str, component: str) -> logging.Logger:
+def setup_logger(name: str, component: str) -> logging.LoggerAdapter[logging.Logger]:
     """Configures a logger with custom component metadata and colors."""
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
-    
+
     # Avoid duplicate handlers if logger is re-initialized
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(ColoredFormatter())
         logger.addHandler(handler)
-        
+
     # Bind the component name to the logger via an Adapter
     return logging.LoggerAdapter(logger, {"component": component})
 
