@@ -15,6 +15,9 @@ logger = setup_logger(NODE_ID, "PRODUCER_SERVER")
 # Internal FIFO Queue
 queue = asyncio.Queue()
 
+# Set to keep strong references to background tasks (prevents Garbage Collection)
+background_tasks = set()
+
 async def handle_producer_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
     """Handles incoming product uploads from Producer Nodes."""
     peername = writer.get_extra_info('peername')
@@ -89,6 +92,8 @@ async def main():
     
     # Start the background delivery worker
     worker_task = asyncio.create_task(delivery_worker())
+    background_tasks.add(worker_task)
+    worker_task.add_done_callback(background_tasks.discard)
     
     # Run the server
     async with server:

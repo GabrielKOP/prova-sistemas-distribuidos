@@ -98,43 +98,13 @@ async def handle_consumer_connection(reader: asyncio.StreamReader, writer: async
                 return
             
             # Demand Control: Safe non-blocking wait using asyncio.Condition
-            product = None
-            async with conditions[p_type]:
-                if not stocks[p_type]:
-                    logger.info(f"Stock '{p_type}' is empty. Consumer '{consumer_id}' is now blocking safely...")
-                    waiting_counts[p_type] += 1
-                    broadcast_event("waiting", waiting_counts)
-                    broadcast_event("log", f"Fila vazia! Consumidor '{consumer_id}' suspenso aguardando '{p_type}'.")
-                    
-                # Loop to handle spurious wakeups or race conditions among multiple consumers
-                while not stocks[p_type]:
-                    await conditions[p_type].wait()
-                
-                # If we were waiting, decrement the blocked counter
-                if product is None and not stocks[p_type]:
-                    # (This check is handled correctly by tracking before/after wait)
-                    pass
-                
-                # Let's adjust counter if it was waiting
-                # To be precise, check if we incremented it:
-                # We can track it with a local boolean
-                # Yes, let's keep it simple: if we incremented it, we decrement it now:
-                
-            # Wait loop finished. We must re-acquire lock to pop (which is done automatically by 'async with')
-            # But wait! If we decrement waiting_counts inside the 'async with' after we exit the wait loop:
-            async with conditions[p_type]:
-                # If we had incremented it because stock was empty:
-                # Actually, let's just do it directly inside the original block:
-                pass
-            
-            # Let's write the wait logic cleanly:
             was_waiting = False
             async with conditions[p_type]:
                 if not stocks[p_type]:
                     logger.info(f"Stock '{p_type}' is empty. Consumer '{consumer_id}' is now blocking safely...")
                     waiting_counts[p_type] += 1
                     broadcast_event("waiting", waiting_counts)
-                    broadcast_event("log", f"Estoque '{p_type}' esgotado! Consumidor '{consumer_id}' bloqueado na CPU (Condition.wait).")
+                    broadcast_event("log", f"Estoque '{p_type}' esgotado! Consumidor '{consumer_id}' suspenso aguardando '{p_type}'.")
                     was_waiting = True
                 
                 while not stocks[p_type]:
@@ -151,9 +121,16 @@ async def handle_consumer_connection(reader: asyncio.StreamReader, writer: async
                 broadcast_event("stock", get_stock_state())
                 broadcast_event("log", f"Produto '{p_type}' ({product['id'][:8]}...) liberado para consumidor '{consumer_id}'.")
             
-            # Deliver the product
-            await send_msg(writer, {"status": "OK", "product": product})
-            logger.info(f"Product delivered to consumer '{consumer_id}' and connection closed.")
+            # Deliver the product with fallback recovery in case of connection failure
+            try:
+                await send_msg(writer, {"status": "OK", "product": product})
+                logger.info(f"Product delivered to consumer '{consumer_id}' and connection closed.")
+            except Exception as send_err:
+                logger.warning(f"Failed to deliver product to consumer '{consumer_id}': {send_err}. Re-queuing product.")
+                async with conditions[p_type]:
+                    stocks[p_type].appendleft(product)
+                    conditions[p_type].notify_all()
+                raise
         else:
             logger.warning(f"Received invalid demand format from {peer}")
     except Exception as e:
